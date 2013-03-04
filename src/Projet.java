@@ -66,7 +66,6 @@ public class Projet {
 		
 		TabuSearch tabusearch = new TabuSearch(store, queens);
 		tabusearch.search();
-		tabusearch.getBestSolution();
 
 	}
 
