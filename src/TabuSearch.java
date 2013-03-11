@@ -19,8 +19,8 @@ public class TabuSearch {
 	private IntDomain[] domains;
 	private TabuList tabuList;
 	
-	int maxIteration = 1;
-	int maxIterationWhithoutBetterSolution = 100;
+	int maxIteration = 100;
+	int maxIterationWhithoutBetterSolution = 5;
 	int tabuListMaxLength = 50;
 
 	public TabuSearch(Store store, IntVar[] vars) {
@@ -40,11 +40,11 @@ public class TabuSearch {
 		}
 		
 		// Step 1 : generate a random solution
-		this.generate_random();
+		vars = this.generate_random();
 		
 		
 		// Step 2 : save the best known solution
-		bestSolution = vars.clone();
+		bestSolution = this.cloneIntVar(vars);
 		
 		
 		// Step 3 : search solution while stopping conditions not met
@@ -53,25 +53,35 @@ public class TabuSearch {
 		int noBetterSolution = 0;
 		while(!optimalSolutionFound && (iterations < maxIteration) && (noBetterSolution < maxIterationWhithoutBetterSolution))
 		{		
+			// Updating values for stopping conditions
+			iterations++;
+			System.out.println("Iteration n°"+iterations);
+			
+			
 			// Step 3.1 : search candidate solutions
 			ArrayList<IntVar[]> candidateSolutions = getCandidateSolutions(vars, domains, tabuList);
 		
 			// Step 3.2 : select best candidate solution
-			IntVar[] bestCurrentSolution = getBestSolution(candidateSolutions);
-		
+			IntVar[] bestCandidateSolution = getBestSolution(candidateSolutions);
+			
 			// Step 3.3 update current solution
-			if(getViolatedConstraints(bestCurrentSolution) < getViolatedConstraints(bestSolution)) {
-				bestSolution = bestCurrentSolution;
+			vars = cloneIntVar(bestCandidateSolution);
+		
+			// Step 3.4 : If current cost is better than cost of best known solution, update best known solution
+			if(getViolatedConstraints(bestCandidateSolution) < getViolatedConstraints(bestSolution)) {
+				bestSolution = bestCandidateSolution;
 				noBetterSolution = 0;
 			}
 			else {
 				noBetterSolution++;
 			}
-		
-			// Step 3.4 : If current cost is better than cost of best known solution, update best known solution
+			
+			if(getViolatedConstraints(bestSolution) == 0) {
+				optimalSolutionFound = true;
+			}
 		
 			// Step 3.5 : update tabu list
-		
+			tabuList.insert(bestCandidateSolution);
 			
 			
 			// Print the best solution
@@ -82,13 +92,17 @@ public class TabuSearch {
 				}
 			}
 			
-			
-			// Updating values for stopping conditions
-			iterations++;
-			System.out.println(iterations);
 		}
 		
-		System.out.println("End of search. Best solution is :");
+		String whyStopped = "";
+		if(optimalSolutionFound) 
+			whyStopped = " optimal solution found ";
+		else if(iterations >= maxIteration)
+			whyStopped = " max iterations reached ";
+		else if(noBetterSolution >= maxIterationWhithoutBetterSolution)
+			whyStopped = " no better solution found in " + noBetterSolution + "iterations ";
+		
+		System.out.println("\n\nEnd of search because" + whyStopped + ". Best solution is :");
 		for(int i = 0 ; i < bestSolution.length ; i++) {
 			System.out.println(bestSolution[i]);
 		}
@@ -96,7 +110,7 @@ public class TabuSearch {
 	}
 	
 	
-	public void generate_random() {
+	public IntVar[] generate_random() {
 		
 		System.out.println("Generating random solution...");
 		
@@ -107,6 +121,8 @@ public class TabuSearch {
 		}
 		System.out.println("___________");
 		
+		return vars;
+		
 	}
 	
 	public ArrayList<IntVar[]> getCandidateSolutions(IntVar[] vars, IntDomain[] domains, TabuList tabuList) {
@@ -114,11 +130,10 @@ public class TabuSearch {
 		ArrayList<IntVar[]> candidateSolutions = new ArrayList<IntVar[]>();
 		
 		for(int i = 0 ; i < vars.length ; i++) {
-			for(int value = domains[i].min() ; value < domains[i].max(); value++) {
+			for(int value = domains[i].min() ; value <= domains[i].max(); value++) {
 				if(value != vars[i].value()) {
-					IntVar[] neighboor = vars.clone();
+					IntVar[] neighboor = this.cloneIntVar(vars);
 					neighboor[i].setDomain(value, value);
-					System.out.println("\t\t" + neighboor[i]);
 					
 					if(!tabuList.contains(neighboor)) {
 						candidateSolutions.add(neighboor);
@@ -126,34 +141,86 @@ public class TabuSearch {
 				}
 			}
 		}
-		
-
-		System.out.println("Candidate solutions :");
+		/*System.out.println("Candidate solutions :");
 		for(int j = 0 ; j < candidateSolutions.size() ; j++) {
 			for(int i = 0 ; i < candidateSolutions.get(j).length ; i++) {
 
 				System.out.println(candidateSolutions.get(j)[i]);
 			}
 			System.out.println("____");
+		}*/
+		
+		return candidateSolutions;
+	}
+	
+	public IntVar[] cloneIntVar(IntVar[] toClone) {
+		IntVar[] cloned = new IntVar[toClone.length];
+
+		for(int i = 0 ; i < toClone.length ; i++) {
+			cloned[i] = new IntVar(toClone[i].store,
+					toClone[i].id,
+					toClone[i].value(),
+					toClone[i].value());
 		}
 		
-		return null;
+		return cloned;
 	}
 	
 	
 	public IntVar[] getBestSolution(ArrayList<IntVar[]> candidateSolutions) {
 		
-		// Comtper les contraintes violées de chaque bordel
+		IntVar[] bestSolution = new IntVar[candidateSolutions.get(0).length];
+		bestSolution = cloneIntVar(candidateSolutions.get(0));
+		int bestCost = getViolatedConstraints(candidateSolutions.get(0));
 		
+		for(int i = 1 ; i < candidateSolutions.size() ; i++) {
+			if(getViolatedConstraints(candidateSolutions.get(i)) < bestCost)
+				bestSolution = candidateSolutions.get(i);
+		}
 		
-		// libérer mémoire 
-		
-		return null;
+		return cloneIntVar(bestSolution);
 	}
 	
+	
+	// Cost or fitness of an alldifferent constraint
+	public int costAllDifferent(int[] sol) {
+		int n = 0;
+		for (int i=0; i<sol.length; ++i) {
+			for (int j=i+1; j<sol.length; ++j) {
+				if (sol[i] == sol[j]) ++n;
+			}
+		}
+		return n;
+	}
+	
+	// Fitness of a solution for the n-queens problem
 	public int getViolatedConstraints(IntVar[] candidateSolution) {
 		
-		return 10;
+		int[] sol = new int[candidateSolution.length];
+		for(int i = 0 ; i < sol.length ; i++) {
+			sol[i] = candidateSolution[i].value();
+		}
+		
+		int n = 0;
+
+		// allDifferent on Q
+		n += costAllDifferent(sol);
+
+		// allDifferent on y
+		int[] aux = new int[sol.length];
+		for (int i=0; i<sol.length; ++i) {
+			aux[i] = sol[i] + i;
+		}
+		n += costAllDifferent(aux);
+
+		// allDifferent on z
+		for (int i=0; i<sol.length; ++i) {
+			aux[i] = sol[i] - i;
+		}
+		n += costAllDifferent(aux);
+		
+		
+		return n;
 	}
 	
 
