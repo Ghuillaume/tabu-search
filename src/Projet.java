@@ -13,7 +13,7 @@ public class Projet {
 	 */
 	public static void main(String[] args) {
 		
-		int numberQ = 4;
+		int numberQ = 7;
 
 		// Creating constraint store
 		Store store = new Store();

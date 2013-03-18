@@ -21,4 +21,23 @@ public class TabuList extends LinkedList<IntVar[]> {
 		this.addLast(toAdd);
 	}
 	
+	public boolean isForbidden(IntVar[] neighboor) {
+		
+		boolean equals;
+		
+		for(int i = 0 ; i < this.size() ; i++) {
+			
+			equals = true;
+			
+			for(int j = 0 ; j < this.get(i).length ; j++) {
+				equals &= (this.get(i)[j].value() == neighboor[j].value());
+			}
+			if(equals) {
+				return true;
+			}
+		}
+		
+		return false;
+	}
+	
 }

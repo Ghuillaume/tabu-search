@@ -19,9 +19,9 @@ public class TabuSearch {
 	private IntDomain[] domains;
 	private TabuList tabuList;
 	
-	int maxIteration = 100;
-	int maxIterationWhithoutBetterSolution = 5;
-	int tabuListMaxLength = 50;
+	int maxIteration = 900;
+	int maxIterationWhithoutBetterSolution = 100;
+	int tabuListMaxLength = 10;
 
 	public TabuSearch(Store store, IntVar[] vars) {
 		this.store = store;
@@ -54,6 +54,7 @@ public class TabuSearch {
 		while(!optimalSolutionFound && (iterations < maxIteration) && (noBetterSolution < maxIterationWhithoutBetterSolution))
 		{		
 			// Updating values for stopping conditions
+			System.out.println("===============");
 			iterations++;
 			System.out.println("Iteration n°"+iterations);
 			
@@ -63,6 +64,11 @@ public class TabuSearch {
 		
 			// Step 3.2 : select best candidate solution
 			IntVar[] bestCandidateSolution = getBestSolution(candidateSolutions);
+			System.out.println("Best candidate solution :");
+			for(int i = 0 ; i < bestCandidateSolution.length ; i++) {
+				System.out.println(bestCandidateSolution[i]);
+			}
+			
 			
 			// Step 3.3 update current solution
 			vars = cloneIntVar(bestCandidateSolution);
@@ -116,6 +122,7 @@ public class TabuSearch {
 		
 		for(int i = 0 ; i < vars.length ; i++) {
 			int randomNum = domains[i].getRandomValue();
+			
 			vars[i].setDomain(randomNum, randomNum);
 			System.out.println(vars[i]);
 		}
@@ -135,7 +142,7 @@ public class TabuSearch {
 					IntVar[] neighboor = this.cloneIntVar(vars);
 					neighboor[i].setDomain(value, value);
 					
-					if(!tabuList.contains(neighboor)) {
+					if(!tabuList.isForbidden(neighboor)) {
 						candidateSolutions.add(neighboor);
 					}
 				}
